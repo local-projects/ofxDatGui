@@ -206,16 +206,16 @@ class ofxDatGuiTheme{
     
         struct {
             int size = 6;
-            string file = "ofxbraitsch/fonts/Verdana.ttf";
+            string file = "misc/ofxbraitsch/fonts/Verdana.ttf";
             ofTrueTypeFont ttf;
             void load(){ ttf.load(file, size); }
         } font;
     
         struct{
-            string rainbow = "ofxbraitsch/ofxdatgui/picker-rainbow.png";
-            string radioOn = "ofxbraitsch/ofxdatgui/icon-radio-on.png";
-            string radioOff = "ofxbraitsch/ofxdatgui/icon-radio-off.png";
-            string dropdown = "ofxbraitsch/ofxdatgui/icon-dropdown.png";
+            string rainbow = "misc/ofxbraitsch/ofxdatgui/picker-rainbow.png";
+            string radioOn = "misc/ofxbraitsch/ofxdatgui/icon-radio-on.png";
+            string radioOff = "misc/ofxbraitsch/ofxdatgui/icon-radio-off.png";
+            string dropdown = "misc/ofxbraitsch/ofxdatgui/icon-dropdown.png";
         } icon;
 
         static ofColor hex(int n)
