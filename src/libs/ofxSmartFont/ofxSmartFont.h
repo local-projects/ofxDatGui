@@ -23,6 +23,7 @@
 
 #pragma once
 #include "ofTrueTypeFont.h"
+#include "ofMain.h"
 
 class ofxSmartFont {
 

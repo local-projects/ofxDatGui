@@ -439,6 +439,14 @@ class ofxDatGuiDropdown : public ofxDatGuiGroup {
             ofxDatGuiComponent::positionLabel();
         }
     
+        void addToDropDown(string label)
+        {
+            ofxDatGuiDropdownOption* opt = new ofxDatGuiDropdownOption(label);
+            opt->setIndex(children.size());
+            opt->onButtonEvent(this, &ofxDatGuiDropdown::onOptionSelected);
+            children.push_back(opt);
+        }
+    
         void select(int cIndex)
         {
         // ensure value is in range //
