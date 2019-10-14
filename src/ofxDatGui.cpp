@@ -24,7 +24,6 @@
 
 ofxDatGui* ofxDatGui::mActiveGui;
 vector<ofxDatGui*> ofxDatGui::mGuis;
-std::unique_ptr<ofxDatGuiTheme> ofxDatGui::theme;
 
 ofxDatGui::ofxDatGui(int x, int y)
 {
@@ -38,7 +37,16 @@ ofxDatGui::ofxDatGui(ofxDatGuiAnchor anchor)
 {
     init();
     mAnchor = anchor;
-    anchorGui();
+}
+
+ofxDatGui::~ofxDatGui()
+{
+    for (auto i:items) delete i;
+    mGuis.erase(std::remove(mGuis.begin(), mGuis.end(), this), mGuis.end());
+    if (mActiveGui == this) mActiveGui = mGuis.size() > 0 ? mGuis[0] : nullptr;
+    ofRemoveListener(ofEvents().draw, this, &ofxDatGui::onDraw, OF_EVENT_ORDER_AFTER_APP + mIndex);
+    ofRemoveListener(ofEvents().update, this, &ofxDatGui::onUpdate, OF_EVENT_ORDER_BEFORE_APP - mIndex);
+    ofRemoveListener(ofEvents().windowResized, this, &ofxDatGui::onWindowResized, OF_EVENT_ORDER_BEFORE_APP);
 }
 
 void ofxDatGui::init()
@@ -54,27 +62,23 @@ void ofxDatGui::init()
     mThemeChanged = false;
     mAlignmentChanged = false;
     mAlignment = ofxDatGuiAlignment::LEFT;
-// load a default theme //
-    if (theme == nullptr) theme = make_unique<ofxDatGuiTheme>(true);
     mAlpha = 1.0f;
-    mWidth = theme->layout.width;
-    mRowSpacing = theme->layout.vMargin;
-    mGuiBackground = theme->color.guiBackground;
+    mWidth = ofxDatGuiComponent::getTheme()->layout.width;
+    mRowSpacing = ofxDatGuiComponent::getTheme()->layout.vMargin;
+    mGuiBackground = ofxDatGuiComponent::getTheme()->color.guiBackground;
     
 // enable autodraw by default //
-    setAutoDraw(true);
+    setAutoDraw(true, mGuis.size());
     
 // assign focus to this newly created gui //
     mActiveGui = this;
     mGuis.push_back(this);
-    mGuid = mGuis.size();
     ofAddListener(ofEvents().windowResized, this, &ofxDatGui::onWindowResized, OF_EVENT_ORDER_BEFORE_APP);
 }
 
 /* 
-    public getters & setters
+    public api
 */
-
 
 void ofxDatGui::focus()
 {
@@ -93,9 +97,30 @@ void ofxDatGui::focus()
         for (int i=0; i<mGuis.size(); i++) {
             if (mGuis[i]->getAutoDraw()) mGuis[i]->setAutoDraw(true, i);
         }
-    }   else{
-        ofxDatGuiLog::write(ofxDatGuiMsg::PANEL_ALREADY_HAS_FOCUS, "#"+ofToString(mGuid));
     }
+}
+
+void ofxDatGui::expand()
+{
+    if (mGuiFooter != nullptr){
+        mExpanded = true;
+        mGuiFooter->setExpanded(mExpanded);
+        mGuiFooter->setPosition(mPosition.x, mPosition.y + mHeight - mGuiFooter->getHeight() - mRowSpacing);
+    }
+}
+
+void ofxDatGui::collapse()
+{
+    if (mGuiFooter != nullptr){
+        mExpanded = false;
+        mGuiFooter->setExpanded(mExpanded);
+        mGuiFooter->setPosition(mPosition.x, mPosition.y);
+    }
+}
+
+void ofxDatGui::toggle()
+{
+    mExpanded ? collapse() : expand();
 }
 
 bool ofxDatGui::getVisible()
@@ -113,16 +138,21 @@ void ofxDatGui::setWidth(int width, float labelWidth)
     mWidth = width;
     mLabelWidth = labelWidth;
     mWidthChanged = true;
-    if (mAnchor != ofxDatGuiAnchor::NO_ANCHOR) anchorGui();
+    if (mAnchor != ofxDatGuiAnchor::NO_ANCHOR) positionGui();
 }
 
-void ofxDatGui::setTheme(ofxDatGuiTheme* t)
+void ofxDatGui::setTheme(ofxDatGuiTheme* t, bool applyImmediately)
 {
-    mTheme = t;
-    setWidth(t->layout.width, t->layout.labelWidth);
+    if (applyImmediately){
+        for(auto item:items) item->setTheme(t);
+    }   else{
+    // apply on next update call //
+        mTheme = t;
+        mThemeChanged = true;
+    }
     mRowSpacing = t->layout.vMargin;
     mGuiBackground = t->color.guiBackground;
-    mThemeChanged = true;
+    setWidth(t->layout.width, t->layout.labelWidth);
 }
 
 void ofxDatGui::setOpacity(float opacity)
@@ -134,6 +164,12 @@ void ofxDatGui::setOpacity(float opacity)
 void ofxDatGui::setPosition(int x, int y)
 {
     moveGui(ofPoint(x, y));
+}
+
+void ofxDatGui::setPosition(ofxDatGuiAnchor anchor)
+{
+    mAnchor = anchor;
+    if (mAnchor != ofxDatGuiAnchor::NO_ANCHOR) positionGui();
 }
 
 void ofxDatGui::setVisible(bool visible)
@@ -149,11 +185,12 @@ void ofxDatGui::setEnabled(bool enabled)
 void ofxDatGui::setAutoDraw(bool autodraw, int priority)
 {
     mAutoDraw = autodraw;
-    ofRemoveListener(ofEvents().draw, this, &ofxDatGui::onDraw);
-    ofRemoveListener(ofEvents().update, this, &ofxDatGui::onUpdate);
-    if (autodraw){
-        ofAddListener(ofEvents().draw, this, &ofxDatGui::onDraw, OF_EVENT_ORDER_AFTER_APP + priority);
-        ofAddListener(ofEvents().update, this, &ofxDatGui::onUpdate, OF_EVENT_ORDER_BEFORE_APP - priority);
+    ofRemoveListener(ofEvents().draw, this, &ofxDatGui::onDraw, OF_EVENT_ORDER_AFTER_APP + mIndex);
+    ofRemoveListener(ofEvents().update, this, &ofxDatGui::onUpdate, OF_EVENT_ORDER_BEFORE_APP - mIndex);
+    if (mAutoDraw){
+        mIndex = priority;
+        ofAddListener(ofEvents().draw, this, &ofxDatGui::onDraw, OF_EVENT_ORDER_AFTER_APP + mIndex);
+        ofAddListener(ofEvents().update, this, &ofxDatGui::onUpdate, OF_EVENT_ORDER_BEFORE_APP - mIndex);
     }
 }
 
@@ -246,7 +283,7 @@ ofxDatGuiButton* ofxDatGui::addButton(string label)
 ofxDatGuiToggle* ofxDatGui::addToggle(string label, bool enabled)
 {
     ofxDatGuiToggle* button = new ofxDatGuiToggle(label, enabled);
-    button->onButtonEvent(this, &ofxDatGui::onButtonEventCallback);
+    button->onToggleEvent(this, &ofxDatGui::onToggleEventCallback);
     attachItem(button);
     return button;
 }
@@ -362,6 +399,7 @@ ofxDatGuiFolder* ofxDatGui::addFolder(string label, ofColor color)
 {
     ofxDatGuiFolder* folder = new ofxDatGuiFolder(label, color);
     folder->onButtonEvent(this, &ofxDatGui::onButtonEventCallback);
+    folder->onToggleEvent(this, &ofxDatGui::onToggleEventCallback);
     folder->onSliderEvent(this, &ofxDatGui::onSliderEventCallback);
     folder->on2dPadEvent(this, &ofxDatGui::on2dPadEventCallback);
     folder->onMatrixEvent(this, &ofxDatGui::onMatrixEventCallback);
@@ -393,6 +431,22 @@ void ofxDatGui::attachItem(ofxDatGuiComponent* item)
     component retrieval methods
 */
 
+ofxDatGuiLabel* ofxDatGui::getLabel(string bl, string fl){
+    ofxDatGuiLabel* o = nullptr;
+    if (fl != ""){
+        ofxDatGuiFolder* f = static_cast<ofxDatGuiFolder*>(getComponent(ofxDatGuiType::FOLDER, fl));
+        if (f) o = static_cast<ofxDatGuiLabel*>(f->getComponent(ofxDatGuiType::LABEL, bl));
+    } else {
+        o = static_cast<ofxDatGuiLabel*>(getComponent(ofxDatGuiType::LABEL, bl));
+    }
+    if (o==nullptr){
+        o = ofxDatGuiLabel::getInstance();
+        ofxDatGuiLog::write(ofxDatGuiMsg::COMPONENT_NOT_FOUND, fl!="" ? fl+"-"+bl : bl);
+        trash.push_back(o);
+    }
+    return o;
+}
+
 ofxDatGuiButton* ofxDatGui::getButton(string bl, string fl)
 {
     ofxDatGuiButton* o = nullptr;
@@ -404,6 +458,23 @@ ofxDatGuiButton* ofxDatGui::getButton(string bl, string fl)
     }
     if (o==nullptr){
         o = ofxDatGuiButton::getInstance();
+        ofxDatGuiLog::write(ofxDatGuiMsg::COMPONENT_NOT_FOUND, fl!="" ? fl+"-"+bl : bl);
+        trash.push_back(o);
+    }
+    return o;
+}
+
+ofxDatGuiToggle* ofxDatGui::getToggle(string bl, string fl)
+{
+    ofxDatGuiToggle* o = nullptr;
+    if (fl != ""){
+        ofxDatGuiFolder* f = static_cast<ofxDatGuiFolder*>(getComponent(ofxDatGuiType::FOLDER, fl));
+        if (f) o = static_cast<ofxDatGuiToggle*>(f->getComponent(ofxDatGuiType::TOGGLE, bl));
+    }   else{
+        o = static_cast<ofxDatGuiToggle*>(getComponent(ofxDatGuiType::TOGGLE, bl));
+    }
+    if (o==nullptr){
+        o = ofxDatGuiToggle::getInstance();
         ofxDatGuiLog::write(ofxDatGuiMsg::COMPONENT_NOT_FOUND, fl!="" ? fl+"-"+bl : bl);
         trash.push_back(o);
     }
@@ -604,6 +675,18 @@ void ofxDatGui::onButtonEventCallback(ofxDatGuiButtonEvent e)
     }
 }
 
+void ofxDatGui::onToggleEventCallback(ofxDatGuiToggleEvent e)
+{
+    if (toggleEventCallback != nullptr) {
+        toggleEventCallback(e);
+// allow toggle events to decay into button events //
+    }   else if (buttonEventCallback != nullptr) {
+        buttonEventCallback(ofxDatGuiButtonEvent(e.target));
+    }   else{
+        ofxDatGuiLog::write(ofxDatGuiMsg::EVENT_HANDLER_NULL);
+    }
+}
+
 void ofxDatGui::onSliderEventCallback(ofxDatGuiSliderEvent e)
 {
     if (sliderEventCallback != nullptr) {
@@ -663,10 +746,10 @@ void ofxDatGui::onMatrixEventCallback(ofxDatGuiMatrixEvent e)
 void ofxDatGui::onInternalEventCallback(ofxDatGuiInternalEvent e)
 {
 // these events are not dispatched out to the main application //
-    if (e.type == ofxDatGuiEventType::DROPDOWN_TOGGLED){
+    if (e.type == ofxDatGuiEventType::GROUP_TOGGLED){
         layoutGui();
     }   else if (e.type == ofxDatGuiEventType::GUI_TOGGLED){
-        mExpanded ? collapseGui() : expandGui();
+        mExpanded ? collapse() : expand();
     }   else if (e.type == ofxDatGuiEventType::VISIBILITY_CHANGED){
         layoutGui();
     }
@@ -690,26 +773,7 @@ void ofxDatGui::moveGui(ofPoint pt)
     mPosition.x = pt.x;
     mPosition.y = pt.y;
     mAnchor = ofxDatGuiAnchor::NO_ANCHOR;
-    layoutGui();
-}
-
-void ofxDatGui::anchorGui()
-{
-    mPosition.y = 0;
-    if (mAnchor == ofxDatGuiAnchor::TOP_LEFT){
-        mPosition.x = 0;
-    }   else if (mAnchor == ofxDatGuiAnchor::TOP_RIGHT){
-        mPosition.x = ofGetWidth() - mWidth;
-    /*
-        ofGetWidth returns an incorrect value after retina windows are resized in version 0.9.1 & 0.9.2
-        https://github.com/openframeworks/openFrameworks/issues/4746
-        https://github.com/openframeworks/openFrameworks/pull/4858
-    */
-        if (ofxDatGuiIsRetina() && ofGetVersionMajor() == 0 && ofGetVersionMinor() == 9 && (ofGetVersionPatch() == 1 || ofGetVersionPatch() == 2)){
-            mPosition.x = (ofGetWidth() / 2) - mWidth;
-        }
-    }
-    layoutGui();
+    positionGui();
 }
 
 void ofxDatGui::layoutGui()
@@ -719,24 +783,44 @@ void ofxDatGui::layoutGui()
         items[i]->setIndex(i);
     // skip over any components that are currently invisible //
         if (items[i]->getVisible() == false) continue;
-        items[i]->setPosition(mPosition.x, mPosition.y + mHeight);
         mHeight += items[i]->getHeight() + mRowSpacing;
     }
+    positionGui();
+}
+
+void ofxDatGui::positionGui()
+{
+/*
+    ofGetWidth/ofGetHeight returns incorrect values after retina windows are resized in version 0.9.1 & 0.9.2
+    https://github.com/openframeworks/openFrameworks/pull/4858
+*/
+    int multiplier = 1;
+    if (ofxDatGuiIsHighResolution() && ofGetVersionMajor() == 0 && ofGetVersionMinor() == 9 && (ofGetVersionPatch() == 1 || ofGetVersionPatch() == 2)){
+        multiplier = 2;
+    }
+    if (mAnchor == ofxDatGuiAnchor::TOP_LEFT){
+        mPosition.y = 0;
+        mPosition.x = 0;
+    }   else if (mAnchor == ofxDatGuiAnchor::TOP_RIGHT){
+        mPosition.y = 0;
+        mPosition.x = (ofGetWidth() / multiplier) - mWidth;
+    }   else if (mAnchor == ofxDatGuiAnchor::BOTTOM_LEFT){
+        mPosition.x = 0;
+        mPosition.y = (ofGetHeight() / multiplier) - mHeight;
+    }   else if (mAnchor == ofxDatGuiAnchor::BOTTOM_RIGHT){
+        mPosition.x = (ofGetWidth() / multiplier) - mWidth;
+        mPosition.y = (ofGetHeight() / multiplier) - mHeight;
+    }
+    int h = 0;
+    for (int i=0; i<items.size(); i++) {
+    // skip over any components that are currently invisible //
+        if (items[i]->getVisible() == false) continue;
+        items[i]->setPosition(mPosition.x, mPosition.y + h);
+        h += items[i]->getHeight() + mRowSpacing;
+    }
     // move the footer back to the top of the gui //
-    if (!mExpanded) mGuiFooter->setY(mPosition.y);
+    if (!mExpanded) mGuiFooter->setPosition(mPosition.x, mPosition.y);
     mGuiBounds = ofRectangle(mPosition.x, mPosition.y, mWidth, mHeight);
-}
-
-void ofxDatGui::expandGui()
-{
-    mExpanded = true;
-    mGuiFooter->setY(mPosition.y + mHeight - mGuiFooter->getHeight() - mRowSpacing);
-}
-
-void ofxDatGui::collapseGui()
-{
-    mExpanded = false;
-    mGuiFooter->setY(mPosition.y);
 }
 
 /* 
@@ -754,7 +838,8 @@ void ofxDatGui::update()
         if (mWidthChanged) items[i]->setWidth(mWidth, mLabelWidth);
         if (mAlignmentChanged) items[i]->setLabelAlignment(mAlignment);
     }
-   if (mThemeChanged || mWidthChanged) layoutGui();
+    
+    if (mThemeChanged || mWidthChanged) layoutGui();
 
     mTheme = nullptr;
     mAlphaChanged = false;
@@ -851,7 +936,7 @@ void ofxDatGui::onUpdate(ofEventArgs &e)
 
 void ofxDatGui::onWindowResized(ofResizeEventArgs &e)
 {
-    if (mAnchor != ofxDatGuiAnchor::NO_ANCHOR) anchorGui();
+    if (mAnchor != ofxDatGuiAnchor::NO_ANCHOR) positionGui();
 }
 
 

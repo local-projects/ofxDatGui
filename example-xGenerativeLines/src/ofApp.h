@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Line.h"
 #include "ofMain.h"
+#include "Line.h"
 #include "ofxDatGui.h"
 
 class ofApp : public ofBaseApp{
@@ -27,6 +27,7 @@ class ofApp : public ofBaseApp{
         ofxDatGuiSlider* s4;
 
         void onButtonEvent(ofxDatGuiButtonEvent e);
+        void onToggleEvent(ofxDatGuiToggleEvent e);
         void onSliderEvent(ofxDatGuiSliderEvent e);
         void onTextInputEvent(ofxDatGuiTextInputEvent e);
         void onDropdownEvent(ofxDatGuiDropdownEvent e);

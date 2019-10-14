@@ -32,7 +32,7 @@ class ofxDatGui2dPad : public ofxDatGuiComponent {
             mPercentX = 0.5f;
             mPercentY = 0.5f;
             mType = ofxDatGuiType::PAD2D;
-            setTheme(ofxDatGuiComponent::theme.get());
+            setTheme(ofxDatGuiComponent::getTheme());
             setBounds(ofRectangle(0, 0, ofGetWidth(), ofGetHeight()), true);
             ofAddListener(ofEvents().windowResized, this, &ofxDatGui2dPad::onWindowResized);
         }
@@ -42,12 +42,17 @@ class ofxDatGui2dPad : public ofxDatGuiComponent {
             mPercentX = 0.5f;
             mPercentY = 0.5f;
             mType = ofxDatGuiType::PAD2D;
-            setTheme(ofxDatGuiComponent::theme.get());
+            setTheme(ofxDatGuiComponent::getTheme());
             setBounds(bounds, false);
             ofAddListener(ofEvents().windowResized, this, &ofxDatGui2dPad::onWindowResized);
         }
     
-        void setTheme(ofxDatGuiTheme* theme)
+        ~ofxDatGui2dPad()
+        {
+            ofRemoveListener(ofEvents().windowResized, this, &ofxDatGui2dPad::onWindowResized);
+        }
+    
+        void setTheme(const ofxDatGuiTheme* theme)
         {
             setComponentStyle(theme);
             mStyle.height = theme->layout.pad2d.height;
@@ -62,7 +67,13 @@ class ofxDatGui2dPad : public ofxDatGuiComponent {
     
         void setPoint(ofPoint pt)
         {
-            mWorld = pt;
+            if (mBounds.inside(pt)){
+                mPercentX = (pt.x-mBounds.x) / mBounds.width;
+                mPercentY = (pt.y-mBounds.y) / mBounds.height;
+                setWorldCoordinates();
+            }   else{
+        //  the point assigment is outside of the 2d pad's bounds //
+            }
         }
     
         ofPoint getPoint()
@@ -110,6 +121,16 @@ class ofxDatGui2dPad : public ofxDatGuiComponent {
             ofPopStyle();
         }
     
+        void dispatchEvent()
+        {
+            if (pad2dEventCallback != nullptr) {
+                ofxDatGui2dPadEvent e(this, mWorld.x, mWorld.y);
+                pad2dEventCallback(e);
+            }   else{
+                ofxDatGuiLog::write(ofxDatGuiMsg::EVENT_HANDLER_NULL);
+            }
+        }
+    
         static ofxDatGui2dPad* getInstance() { return new ofxDatGui2dPad("X"); }
     
     protected:
@@ -126,13 +147,7 @@ class ofxDatGui2dPad : public ofxDatGuiComponent {
                 mPercentX = (m.x-mPad.x) / mPad.width;
                 mPercentY = (m.y-mPad.y) / mPad.height;
                 setWorldCoordinates();
-            // dispatch event out to main application //
-                if (pad2dEventCallback != nullptr) {
-                    ofxDatGui2dPadEvent e(this, mWorld.x, mWorld.y);
-                    pad2dEventCallback(e);
-                }   else{
-                    ofxDatGuiLog::write(ofxDatGuiMsg::EVENT_HANDLER_NULL);
-                }
+                dispatchEvent();
             }
         }
     

@@ -9,13 +9,13 @@ void ofApp::setup()
 {
 // instantiate and position the gui //
     gui = new ofxDatGui( ofxDatGuiAnchor::TOP_RIGHT );
-    
+	
 // add some components //
     gui->addTextInput("message", "# open frameworks #");
-    
+	
     gui->addFRM();
     gui->addBreak();
-    
+	
 // add a folder to group a few components together //
     ofxDatGuiFolder* folder = gui->addFolder("white folder", ofColor::white);
     folder->addTextInput("** input", "nested input field");
@@ -26,24 +26,24 @@ void ofApp::setup()
     folder->expand();
 
     gui->addBreak();
-    
+	
 // add a couple range sliders //
     gui->addSlider("position X", 0, 120, 75);
     gui->addSlider("position Y", -40, 240, 200);
     gui->addSlider("position Z", -80, 120, -40);
-    
+	
 // and a slider to adjust the gui opacity //
     gui->addSlider("datgui opacity", 0, 100, 100);
-    
+	
 // and a colorpicker //
     gui->addColorPicker("color picker", ofColor::fromHex(0xeeeeee));
-   
+	
 // add a wave monitor //
 // take a look inside example-TimeGraph for more examples of this component and the value plotter //
     gui->addWaveMonitor("wave\nmonitor", 3, .2);
-    
+	
     gui->addBreak();
-    
+	
 // add a dropdown menu //
     vector<string> opts = {"option - 1", "option - 2", "option - 3", "option - 4"};
     gui->addDropdown("select option", opts);
@@ -64,9 +64,10 @@ void ofApp::setup()
 
 // adding the optional footer allows you to collapse/expand the gui //
     gui->addFooter();
-    
+	
 // once the gui has been assembled, register callbacks to listen for component specific events //
     gui->onButtonEvent(this, &ofApp::onButtonEvent);
+    gui->onToggleEvent(this, &ofApp::onToggleEvent);
     gui->onSliderEvent(this, &ofApp::onSliderEvent);
     gui->onTextInputEvent(this, &ofApp::onTextInputEvent);
     gui->on2dPadEvent(this, &ofApp::on2dPadEvent);
@@ -78,31 +79,36 @@ void ofApp::setup()
 //  gui->setLabelAlignment(ofxDatGuiAlignment::CENTER);
 
 // finally let's load up the stock themes, press spacebar to cycle through them //
-    themes = {  new ofxDatGuiTheme(true),
-                new ofxDatGuiThemeSmoke(),
-                new ofxDatGuiThemeWireframe(),
-                new ofxDatGuiThemeMidnight(),
-                new ofxDatGuiThemeAqua(),
-                new ofxDatGuiThemeCharcoal(),
-                new ofxDatGuiThemeAutumn(),
-                new ofxDatGuiThemeCandy()};
+	themes = {  new ofxDatGuiTheme(true),
+        new ofxDatGuiThemeSmoke(),
+		new ofxDatGuiThemeWireframe(),
+		new ofxDatGuiThemeMidnight(),
+		new ofxDatGuiThemeAqua(),
+		new ofxDatGuiThemeCharcoal(),
+		new ofxDatGuiThemeAutumn(),
+		new ofxDatGuiThemeCandy()};
     tIndex = 0;
-    
+	
 // launch the app //
     mFullscreen = true;
     refreshWindow();
+}
+
+void ofApp::onButtonEvent(ofxDatGuiButtonEvent e)
+{
+    cout << "onButtonEvent: " << e.target->getLabel() << endl;
+}
+
+void ofApp::onToggleEvent(ofxDatGuiToggleEvent e)
+{
+    if (e.target->is("toggle fullscreen")) toggleFullscreen();
+    cout << "onToggleEvent: " << e.target->getLabel() << " " << e.checked << endl;
 }
 
 void ofApp::onSliderEvent(ofxDatGuiSliderEvent e)
 {
     cout << "onSliderEvent: " << e.target->getLabel() << " " << e.target->getValue() << endl;
     if (e.target->is("datgui opacity")) gui->setOpacity(e.scale);
-}
-
-void ofApp::onButtonEvent(ofxDatGuiButtonEvent e)
-{
-    if (e.target->is("toggle fullscreen")) toggleFullscreen();
-    cout << "onButtonEvent: " << e.target->getLabel() << " " << e.target->getEnabled() << endl;
 }
 
 void ofApp::onTextInputEvent(ofxDatGuiTextInputEvent e)
@@ -148,6 +154,7 @@ void ofApp::keyPressed(int key)
 void ofApp::toggleFullscreen()
 {
     mFullscreen = !mFullscreen;
+    gui->getToggle("toggle fullscreen")->setChecked(mFullscreen);
     refreshWindow();
 }
 
@@ -155,8 +162,10 @@ void ofApp::refreshWindow()
 {
     ofSetFullscreen(mFullscreen);
     if (!mFullscreen) {
-        ofSetWindowShape(1920, 1400);
-        ofSetWindowPosition((ofGetScreenWidth()/2)-(1920/2), 0);
+        int width = ofGetScreenWidth() * .8;
+        int height = ofGetScreenHeight() * .8;
+        ofSetWindowShape(width, height);
+        ofSetWindowPosition((ofGetScreenWidth()/2)-(width/2), 0);
     }
 }
 

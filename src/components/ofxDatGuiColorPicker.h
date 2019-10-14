@@ -32,7 +32,7 @@ class ofxDatGuiColorPicker : public ofxDatGuiTextInput {
             mColor = color;
             mShowPicker = false;
             mType = ofxDatGuiType::COLOR_PICKER;
-            setTheme(ofxDatGuiComponent::theme.get());
+            setTheme(ofxDatGuiComponent::getTheme());
             
         // center the text input field //
             mInput.setTextInputFieldType(ofxDatGuiInputType::COLORPICKER);
@@ -59,13 +59,13 @@ class ofxDatGuiColorPicker : public ofxDatGuiTextInput {
             vbo.setColorData(&gColors[0], 6, GL_DYNAMIC_DRAW );
         }
     
-        void setTheme(ofxDatGuiTheme* theme)
+        void setTheme(const ofxDatGuiTheme* theme)
         {
             ofxDatGuiTextInput::setTheme(theme);
             mStyle.stripe.color = theme->stripe.colorPicker;
             pickerRect = ofRectangle(0, 0, mInput.getWidth(), (mStyle.height + mStyle.padding) * 3);
             rainbow.image = theme->icon.rainbow;
-            rainbow.rect = ofRectangle(0, 0, 20, pickerRect.height - (mStyle.padding * 2));
+            rainbow.rect = ofRectangle(0, 0, theme->layout.colorPicker.rainbowWidth, pickerRect.height - (mStyle.padding * 2));
             gradientRect = ofRectangle(0, 0, pickerRect.width - rainbow.rect.width - (mStyle.padding * 3), rainbow.rect.height);
             pickerBorder = theme->color.colorPicker.border;
             setTextFieldInputColor();
@@ -155,17 +155,22 @@ class ofxDatGuiColorPicker : public ofxDatGuiTextInput {
                 }   else if (gradientRect.inside(m) && mMouseDown){
                     mColor = gColor;
                 // dispatch event out to main application //
-                    if (colorPickerEventCallback != nullptr) {
-                        ofxDatGuiColorPickerEvent e(this, mColor);
-                        colorPickerEventCallback(e);
-                    }   else{
-                        ofxDatGuiLog::write(ofxDatGuiMsg::EVENT_HANDLER_NULL);
-                    }
+                    dispatchEvent();
                     setTextFieldInputColor();
                 }
                 return true;
             }   else{
                 return false;
+            }
+        }
+    
+        void dispatchEvent()
+        {
+            if (colorPickerEventCallback != nullptr) {
+                ofxDatGuiColorPickerEvent e(this, mColor);
+                colorPickerEventCallback(e);
+            }   else{
+                ofxDatGuiLog::write(ofxDatGuiMsg::EVENT_HANDLER_NULL);
             }
         }
     
@@ -197,19 +202,13 @@ class ofxDatGuiColorPicker : public ofxDatGuiTextInput {
         {
             mColor = ofColor::fromHex(ofHexToInt(mInput.getText()));
         // set the input field text & background colors //
-            mInput.setBackgroundColor(mColor);
-            mInput.setTextInactiveColor(mColor.getBrightness() < BRIGHTNESS_THRESHOLD ? ofColor::white : ofColor::black);
+            updateTextFieldColors();
         // update the gradient picker //
             gColors[2] = mColor;
             gColors[0] = ofColor(mColor.r/2, mColor.g/2, mColor.b/2);
             vbo.setColorData(&gColors[0], 6, GL_DYNAMIC_DRAW );
         // dispatch event out to main application //
-            if (colorPickerEventCallback != nullptr) {
-                ofxDatGuiColorPickerEvent evt(this, mColor);
-                colorPickerEventCallback(evt);
-            }   else{
-                ofxDatGuiLog::write(ofxDatGuiMsg::EVENT_HANDLER_NULL);
-            }
+            dispatchEvent();
         }
 
         inline void setTextFieldInputColor()
@@ -220,8 +219,7 @@ class ofxDatGuiColorPicker : public ofxDatGuiTextInput {
             std::string res ( ss.str() );
             while(res.size() < 6) res+="0";
             mInput.setText(ofToUpper(res));
-            mInput.setBackgroundColor(mColor);
-            mInput.setTextInactiveColor(mColor.getBrightness() < BRIGHTNESS_THRESHOLD ? ofColor::white : ofColor::black);
+            updateTextFieldColors();
         }
     
     private:
@@ -243,7 +241,14 @@ class ofxDatGuiColorPicker : public ofxDatGuiTextInput {
         vector<ofVec2f> gPoints;
         vector<ofFloatColor> gColors;
     
-        static const int BRIGHTNESS_THRESHOLD = 185;
+        void updateTextFieldColors()
+        {
+            mInput.setBackgroundColor(mColor);
+        
+            //Counting the perceptive luminance - human eye favors green color...
+            double a = 1 - ( 0.299 * mColor.r + 0.587 * mColor.g + 0.114 * mColor.b)/255;
+            mInput.setTextInactiveColor(a < 0.5 ? ofColor::black : ofColor::white);
+        }
 
 };
 

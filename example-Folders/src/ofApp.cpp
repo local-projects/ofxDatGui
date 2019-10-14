@@ -10,6 +10,7 @@ void ofApp::setup()
     int x = 150;
     int y = 100;
     ofSetWindowPosition(0, 0);
+    ofSetWindowShape(1450, 800);
 
     f1 = new ofxDatGuiFolder("folder 1", ofColor::fromHex(0xFFD00B));
     f1->addToggle("toggle");
@@ -35,6 +36,7 @@ void ofApp::setup()
     f2->expand();
     
     f1->onButtonEvent(this, &ofApp::onButtonEvent);
+    f1->onToggleEvent(this, &ofApp::onToggleEvent);
     f1->onSliderEvent(this, &ofApp::onSliderEvent);
     f1->onMatrixEvent(this, &ofApp::onMatrixEvent);
     f1->onColorPickerEvent(this, &ofApp::onColorPickerEvent);
@@ -48,6 +50,11 @@ void ofApp::setup()
 void ofApp::onButtonEvent(ofxDatGuiButtonEvent e)
 {
     cout << "onButtonEvent" << endl;
+}
+
+void ofApp::onToggleEvent(ofxDatGuiToggleEvent e)
+{
+    cout << "onToggleEvent " << e.checked << endl;
 }
 
 void ofApp::onSliderEvent(ofxDatGuiSliderEvent e)
