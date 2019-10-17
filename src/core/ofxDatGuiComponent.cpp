@@ -75,7 +75,9 @@ string ofxDatGuiComponent::getName()
 
 bool ofxDatGuiComponent::is(string name)
 {
-    return ofToLower(mName) == ofToLower(name);
+	// This used to use ofToLower(), but it was just too slow
+	if (mName.size() != name.size()) return false;
+	return mName == name;
 }
 
 ofxDatGuiType ofxDatGuiComponent::getType()
