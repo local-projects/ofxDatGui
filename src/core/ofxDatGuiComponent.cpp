@@ -73,9 +73,23 @@ string ofxDatGuiComponent::getName()
     return mName;
 }
 
+char asciitolower(char in) {
+	if (in <= 'Z' && in >= 'A')
+		return in - ('Z' - 'z');
+	return in;
+}
+
+
 bool ofxDatGuiComponent::is(string name)
 {
-    return ofToLower(mName) == ofToLower(name);
+
+	string lowerName = name;
+	string lowermName = mName;
+	std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), asciitolower);
+	std::transform(lowermName.begin(), lowermName.end(), lowermName.begin(), asciitolower);
+	return  lowermName == lowerName;
+    //return ofToLower(mName) == ofToLower(name);
+	//mName == name;
 }
 
 ofxDatGuiType ofxDatGuiComponent::getType()
