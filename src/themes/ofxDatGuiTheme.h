@@ -219,7 +219,7 @@ class ofxDatGuiTheme{
     
         struct {
             int size = 6;
-            string file = AssetPath + "ofxbraitsch/fonts/Verdana.ttf";
+            string file = AssetPath + "ofxdatgui/fonts/Verdana.ttf";
             shared_ptr<ofxSmartFont> ptr;
         } font;
     
@@ -229,11 +229,11 @@ class ofxDatGuiTheme{
             shared_ptr<ofImage> radioOff = make_shared<ofImage>();
             shared_ptr<ofImage> groupOpen = make_shared<ofImage>();
             shared_ptr<ofImage> groupClosed = make_shared<ofImage>();
-            string rainbowPath = AssetPath + "ofxbraitsch/ofxdatgui/picker-rainbow.png";
-            string radioOnPath = AssetPath + "ofxbraitsch/ofxdatgui/icon-radio-on.png";
-            string radioOffPath = AssetPath + "ofxbraitsch/ofxdatgui/icon-radio-off.png";
-            string groupOpenPath = AssetPath + "ofxbraitsch/ofxdatgui/icon-group-open.png";
-            string groupClosedPath = AssetPath + "ofxbraitsch/ofxdatgui/icon-group-closed.png";
+            string rainbowPath = AssetPath + "ofxdatgui/icons/picker-rainbow.png";
+            string radioOnPath = AssetPath + "ofxdatgui/icons/icon-radio-on.png";
+            string radioOffPath = AssetPath + "ofxdatgui/icons/icon-radio-off.png";
+            string groupOpenPath = AssetPath + "ofxdatgui/icons/icon-group-open.png";
+            string groupClosedPath = AssetPath + "ofxdatgui/icons/icon-group-closed.png";
         } icon;
 
         static ofColor hex(int n)
